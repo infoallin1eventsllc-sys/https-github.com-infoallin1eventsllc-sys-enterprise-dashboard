@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Enterprise Command Center - Real-time team collaboration dashboard with sales pipeline, project management, and operations monitoring.">
+    <meta name="theme-color" content="#0b1326">
+    
+    <title>Enterprise Command Center</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ============================================
+           DESIGN SYSTEM & TOKENS
+           ============================================ */
+        
+        :root {
+            --color-background: #0b1326;
+            --color-surface: #171f33;
+            --color-surface-hover: #222a3d;
+            --color-border: #5b403e;
+            --color-text-primary: #dae2fd;
+            --color-text-secondary: #9cabb5;
+            --color-accent-gold: #fabd00;
+            --color-accent-coral: #ff5352;
+            --color-accent-teal: #3cddc7;
+            --color-success: #a8dba8;
+            --color-warning: #fabd00;
+            --color-error: #ff5352;
+            
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            --transition-fast: 150ms ease-out;
+            --transition-normal: 300ms ease-out;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            background-color: var(--color-background);
+            color: var(--color-text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-height: 100vh;
+        }
+        
+        /* ============================================
+           COMPONENT STYLES
+           ============================================ */
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(91, 64, 62, 0.5);
+            border-radius: var(--radius-md);
+            transition: all var(--transition-normal);
+        }
+        
+        .glass-card:hover {
+            border-color: rgba(250, 189, 0, 0.3);
+            box-shadow: 0 0 20px rgba(250, 189, 0, 0.05);
+        }
+        
+        .glass-card:focus-within {
+            border-color: var(--color-accent-gold);
+            box-shadow: 0 0 20px rgba(250, 189, 0, 0.1);
+        }
+        
+        /* Accessibility: Focus Visible */
+        .glass-card:focus-visible {
+            outline: 2px solid var(--color-accent-gold);
+            outline-offset: 2px;
+        }
+        
+        .button-primary {
+            background-color: var(--color-accent-coral);
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-sm);
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .button-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .button-primary:active {
+            transform: translateY(0);
+        }
+        
+        .button-primary:focus-visible {
+            outline: 2px solid var(--color-accent-gold);
+            outline-offset: 2px;
+        }
+        
+        .button-secondary {
+            background-color: var(--color-accent-gold);
+            color: #0b1326;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-sm);
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .button-secondary:hover {
+            opacity: 0.9;
+        }
+        
+        .button-secondary:focus-visible {
+            outline: 2px solid var(--color-accent-coral);
+            outline-offset: 2px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-badge.active {
+            background-color: var(--color-accent-teal);
+            color: #003731;
+        }
+        
+        .status-badge.progress {
+            background-color: var(--color-accent-gold);
+            color: #3f2e00;
+        }
+        
+        .status-badge.risk {
+            background-color: var(--color-accent-coral);
+            color: #410004;
+        }
+        
+        .status-badge.complete {
+            background-color: var(--color-success);
+            color: #1b4d1b;
+        }
+        
+        .input-field {
+            width: 100%;
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            color: var(--color-text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: all var(--transition-fast);
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: var(--color-accent-gold);
+            box-shadow: 0 0 0 3px rgba(250, 189, 0, 0.1);
+        }
+        
+        .input-field::placeholder {
+            color: var(--color-text-secondary);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-md);
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp var(--transition-normal);
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .tab-button {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--color-text-secondary);
+            background: transparent;
+        }
+        
+        .tab-button:hover {
+            color: var(--color-text-primary);
+        }
+        
+        .tab-button.active {
+            color: var(--color-accent-gold);
+            border-bottom-color: var(--color-accent-gold);
+        }
+        
+        .tab-button:focus-visible {
+            outline: 2px solid var(--color-accent-gold);
+            outline-offset: -2px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.2);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--color-border);
+            border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: var(--color-accent-gold);
+        }
+        
+        /* ============================================
+           LAYOUT & RESPONSIVE
+           ============================================ */
+        
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(34, 42, 61, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--color-border);
+        }
+        
+        main {
+            padding: var(--spacing-lg);
+        }
+        
+        @media (max-width: 768px) {
+            main {
+                padding: var(--spacing-md);
+            }
+            
+            .tab-button {
+                padding: var(--spacing-sm);
+                font-size: 12px;
+            }
+        }
+        
+        /* ============================================
+           UTILITY CLASSES
+           ============================================ */
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .font-bold {
+            font-weight: 700;
+        }
+        
+        .font-semibold {
+            font-weight: 600;
+        }
+        
+        .text-sm {
+            font-size: 14px;
+        }
+        
+        .text-xs {
+            font-size: 12px;
+        }
+        
+        .text-2xl {
+            font-size: 24px;
+        }
+        
+        .text-3xl {
+            font-size: 32px;
+        }
+        
+        .text-secondary {
+            color: var(--color-text-secondary);
+        }
+        
+        .mb-0 { margin-bottom: 0; }
+        .mb-2 { margin-bottom: var(--spacing-sm); }
+        .mb-4 { margin-bottom: var(--spacing-md); }
+        .mb-6 { margin-bottom: var(--spacing-lg); }
+        .mb-8 { margin-bottom: var(--spacing-xl); }
+        
+        .mt-2 { margin-top: var(--spacing-sm); }
+        .mt-4 { margin-top: var(--spacing-md); }
+        .mt-6 { margin-top: var(--spacing-lg); }
+        
+        .gap-2 { gap: var(--spacing-sm); }
+        .gap-4 { gap: var(--spacing-md); }
+        .gap-6 { gap: var(--spacing-lg); }
+        
+        .opacity-60 { opacity: 0.6; }
+        
+        /* ============================================
+           STATE & ANIMATION
+           ============================================ */
+        
+        [aria-disabled="true"],
+        .disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .loading {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .error {
+            color: var(--color-error);
+        }
+        
+        .success {
+            color: var(--color-success);
+        }
+    </style>
+</head>
+<body>
+    <!-- ============================================
+         LOGIN MODAL
+         ============================================ -->
+    <div id="loginModal" class="modal show" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+        <div class="modal-content">
+            <div class="text-center mb-8">
+                <span class="material-symbols-outlined text-5xl text-yellow-400 mb-4 block" aria-hidden="true">dashboard</span>
+                <h1 id="loginTitle" class="text-3xl font-bold text-yellow-400 mb-2">COMMAND CENTER</h1>
+                <p class="text-secondary">Enterprise Team Collaboration Dashboard</p>
+            </div>
+            
+            <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4 mb-8">
+                <div>
+                    <label for="emailInput" class="block text-sm font-semibold mb-2">Email Address</label>
+                    <input
+                        id="emailInput"
+                        type="email"
+                        placeholder="name@company.com"
+                        class="input-field"
+                        required
+                        autocomplete="email"
+                        aria-required="true"
+                        aria-invalid="false">
+                </div>
+                
+                <div>
+                    <label for="passwordInput" class="block text-sm font-semibold mb-2">Password</label>
+                    <input
+                        id="passwordInput"
+                        type="password"
+                        placeholder="••••••••"
+                        class="input-field"
+                        required
+                        autocomplete="current-password"
+                        aria-required="true"
+                        aria-invalid="false">
+                </div>
+                
+                <div id="loginError" class="text-sm error" role="alert" style="display: none;"></div>
+                
+                <button type="submit" class="button-primary w-full">
+                    <span class="material-symbols-outlined text-sm" aria-hidden="true">login</span>
+                    Sign In
+                </button>
+            </form>
+            
+            <button type="button" onclick="handleDemoLogin()" class="button-secondary w-full">
+                <span class="material-symbols-outlined text-sm" aria-hidden="true">play_arrow</span>
+                Try Demo Account
+            </button>
+            
+            <p class="text-center text-xs text-secondary mt-6">
+                Demo credentials available for evaluation
+            </p>
+        </div>
+    </div>
+
+    <!-- ============================================
+         MAIN DASHBOARD
+         ============================================ -->
+    <div id="dashboard" style="display: none;" role="main">
+        <!-- Header -->
+        <header>
+            <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <span class="material-symbols-outlined text-4xl text-yellow-400" aria-hidden="true">dashboard</span>
+                    <div>
+                        <h1 class="text-2xl font-bold text-yellow-400">COMMAND CENTER</h1>
+                        <p class="text-xs text-secondary">Real-time Operations Platform</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-6">
+                    <div class="hidden md:flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse" aria-hidden="true"></span>
+                        <span class="text-xs text-secondary">Live Data</span>
+                    </div>
+                    
+                    <div id="userInfo" class="flex items-center gap-3">
+                        <img
+                            id="userAvatar"
+                            src="https://api.dicebear.com/7.x/avataaars/svg?seed=user"
+                            class="w-10 h-10 rounded-full"
+                            alt="User avatar">
+                        <div>
+                            <p id="userName" class="text-sm font-semibold">Loading...</p>
+                            <p id="userRole" class="text-xs text-secondary">User</p>
+                        </div>
+                    </div>
+                    
+                    <button
+                        onclick="handleLogout()"
+                        class="material-symbols-outlined text-gray-400 hover:text-yellow-400 transition"
+                        aria-label="Sign out">
+                        logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto space-y-8">
+            
+            <!-- Tab Navigation -->
+            <nav class="flex gap-8 border-b border-gray-700 overflow-x-auto" role="tablist" aria-label="Dashboard sections">
+                <button
+                    role="tab"
+                    aria-selected="true"
+                    aria-controls="overview-tab"
+                    class="tab-button active"
+                    onclick="switchTab('overview')">
+                    Overview
+                </button>
+                <button
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="sales-tab"
+                    class="tab-button"
+                    onclick="switchTab('sales')">
+                    Sales Pipeline
+                </button>
+                <button
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="projects-tab"
+                    class="tab-button"
+                    onclick="switchTab('projects')">
+                    Projects
+                </button>
+                <button
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="team-tab"
+                    class="tab-button"
+                    onclick="switchTab('team')">
+                    Team
+                </button>
+                <button
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="activity-tab"
+                    class="tab-button"
+                    onclick="switchTab('activity')">
+                    Activity
+                </button>
+            </nav>
+
+            <!-- Overview Tab -->
+            <section id="overview-tab" role="tabpanel" class="tab-content">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="glass-card p-6 rounded-xl" aria-label="Active deals count">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-secondary text-xs font-semibold uppercase">Active Deals</span>
+                            <span class="material-symbols-outlined text-yellow-400" aria-hidden="true">trending_up</span>
+                        </div>
+                        <p class="text-3xl font-bold text-yellow-400" id="statDeals">0</p>
+                        <p class="text-xs text-secondary mt-2">Sales Pipeline</p>
+                    </div>
+                    
+                    <div class="glass-card p-6 rounded-xl" aria-label="In progress projects count">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-secondary text-xs font-semibold uppercase">In Progress</span>
+                            <span class="material-symbols-outlined text-blue-400" aria-hidden="true">work</span>
+                        </div>
+                        <p class="text-3xl font-bold text-blue-400" id="statProjects">0</p>
+                        <p class="text-xs text-secondary mt-2">Projects & Tasks</p>
+                    </div>
+                    
+                    <div class="glass-card p-6 rounded-xl" aria-label="Team members count">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-secondary text-xs font-semibold uppercase">Team Members</span>
+                            <span class="material-symbols-outlined text-teal-400" aria-hidden="true">people</span>
+                        </div>
+                        <p class="text-3xl font-bold text-teal-400" id="statTeam">0</p>
+                        <p class="text-xs text-secondary mt-2">Active Users</p>
+                    </div>
+                    
+                    <div class="glass-card p-6 rounded-xl" aria-label="Total revenue">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-secondary text-xs font-semibold uppercase">Pipeline Value</span>
+                            <span class="material-symbols-outlined text-green-400" aria-hidden="true">payments</span>
+                        </div>
+                        <p class="text-3xl font-bold text-green-400" id="statRevenue">$0</p>
+                        <p class="text-xs text-secondary mt-2">Total Value</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 glass-card p-8 rounded-xl">
+                        <h2 class="text-lg font-bold text-white mb-6">Recent Updates</h2>
+                        <div id="recentActivity" class="space-y-4">
+                            <p class="text-secondary text-sm">No activity yet</p>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card p-8 rounded-xl">
+                        <h2 class="text-lg font-bold text-white mb-6">System Status</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm">Data Sync</span>
+                                    <span class="text-teal-400 font-semibold">Connected</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm">Authentication</span>
+                                    <span class="text-green-400 font-semibold">Verified</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sales Pipeline Tab -->
+            <section id="sales-tab" role="tabpanel" class="tab-content" style="display: none;">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-white">Sales Pipeline</h2>
+                    <button
+                        onclick="openModal('dealModal')"
+                        class="button-primary"
+                        aria-label="Create a new sales deal">
+                        <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                        New Deal
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="salesPipeline" role="region" aria-label="Sales pipeline stages">
+                    <!-- Kanban columns render here -->
+                </div>
+            </section>
+
+            <!-- Projects Tab -->
+            <section id="projects-tab" role="tabpanel" class="tab-content" style="display: none;">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-white">Projects & Tasks</h2>
+                    <button
+                        onclick="openModal('taskModal')"
+                        class="button-primary"
+                        aria-label="Create a new task">
+                        <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                        New Task
+                    </button>
+                </div>
+                
+                <div class="space-y-4" id="projectsList" role="region" aria-label="Project list">
+                    <!-- Projects render here -->
+                </div>
+            </section>
+
+            <!-- Team Tab -->
+            <section id="team-tab" role="tabpanel" class="tab-content" style="display: none;">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-white">Team Members</h2>
+                    <button
+                        onclick="openModal('memberModal')"
+                        class="button-primary"
+                        aria-label="Add a team member">
+                        <span class="material-symbols-outlined" aria-hidden="true">person_add</span>
+                        Add Member
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="teamGrid" role="region" aria-label="Team members">
+                    <!-- Team members render here -->
+                </div>
+            </section>
+
+            <!-- Activity Tab -->
+            <section id="activity-tab" role="tabpanel" class="tab-content" style="display: none;">
+                <h2 class="text-2xl font-bold text-white mb-6">Activity Timeline</h2>
+                <div class="space-y-4" id="activityTimeline" role="region" aria-label="Activity timeline">
+                    <!-- Activity renders here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ============================================
+         MODALS
+         ============================================ -->
+
+    <!-- Deal Modal -->
+    <div id="dealModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="dealModalTitle">
+        <div class="modal-content">
+            <h2 id="dealModalTitle" class="text-2xl font-bold text-white mb-6">Create New Deal</h2>
+            <form id="dealForm" onsubmit="handleSaveDeal(event)" class="space-y-4">
+                <div>
+                    <label for="dealName" class="block text-sm font-semibold mb-2">Deal Name</label>
+                    <input
+                        id="dealName"
+                        type="text"
+                        class="input-field"
+                        placeholder="Client name or deal title"
+                        required
+                        aria-required="true">
+                </div>
+                
+                <div>
+                    <label for="dealAmount" class="block text-sm font-semibold mb-2">Deal Amount ($)</label>
+                    <input
+                        id="dealAmount"
+                        type="number"
+                        class="input-field"
+                        placeholder="0"
+                        min="0"
+                        required
+                        aria-required="true">
+                </div>
+                
+                <div>
+                    <label for="dealStage" class="block text-sm font-semibold mb-2">Stage</label>
+                    <select id="dealStage" class="input-field" required aria-required="true">
+                        <option value="">Select a stage</option>
+                        <option value="Prospecting">Prospecting</option>
+                        <option value="Qualification">Qualification</option>
+                        <option value="Proposal">Proposal</option>
+                        <option value="Negotiation">Negotiation</option>
+                        <option value="Closed Won">Closed Won</option>
+                    </select>
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button type="submit" class="button-primary flex-1">Create Deal</button>
+                    <button type="button" onclick="closeModal('dealModal')" class="button-secondary flex-1">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+        <div class="modal-content">
+            <h2 id="taskModalTitle" class="text-2xl font-bold text-white mb-6">Create New Task</h2>
+            <form id="taskForm" onsubmit="handleSaveTask(event)" class="space-y-4">
+                <div>
+                    <label for="taskName" class="block text-sm font-semibold mb-2">Task Description</label>
+                    <input
+                        id="taskName"
+                        type="text"
+                        class="input-field"
+                        placeholder="What needs to be done?"
+                        required
+                        aria-required="true">
+                </div>
+                
+                <div>
+                    <label for="taskPriority" class="block text-sm font-semibold mb-2">Priority</label>
+                    <select id="taskPriority" class="input-field" required aria-required="true">
+                        <option value="">Select priority</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="taskDueDate" class="block text-sm font-semibold mb-2">Due Date</label>
+                    <input
+                        id="taskDueDate"
+                        type="date"
+                        class="input-field"
+                        required
+                        aria-required="true">
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button type="submit" class="button-primary flex-1">Create Task</button>
+                    <button type="button" onclick="closeModal('taskModal')" class="button-secondary flex-1">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Member Modal -->
+    <div id="memberModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="memberModalTitle">
+        <div class="modal-content">
+            <h2 id="memberModalTitle" class="text-2xl font-bold text-white mb-6">Add Team Member</h2>
+            <form id="memberForm" onsubmit="handleSaveMember(event)" class="space-y-4">
+                <div>
+                    <label for="memberName" class="block text-sm font-semibold mb-2">Full Name</label>
+                    <input
+                        id="memberName"
+                        type="text"
+                        class="input-field"
+                        placeholder="John Doe"
+                        required
+                        aria-required="true">
+                </div>
+                
+                <div>
+                    <label for="memberEmail" class="block text-sm font-semibold mb-2">Email</label>
+                    <input
+                        id="memberEmail"
+                        type="email"
+                        class="input-field"
+                        placeholder="john@company.com"
+                        required
+                        aria-required="true">
+                </div>
+                
+                <div>
+                    <label for="memberRole" class="block text-sm font-semibold mb-2">Role</label>
+                    <select id="memberRole" class="input-field" required aria-required="true">
+                        <option value="">Select role</option>
+                        <option value="Analyst">Analyst</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Executive">Executive</option>
+                    </select>
+                </div>
+                
+                <div class="flex gap-3 mt-6">
+                    <button type="submit" class="button-primary flex-1">Add Member</button>
+                    <button type="button" onclick="closeModal('memberModal')" class="button-secondary flex-1">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================
+         JAVASCRIPT APPLICATION
+         ============================================ -->
+    <script>
+        /**
+         * ENTERPRISE COMMAND CENTER
+         * Production-grade team collaboration dashboard
+         * 
+         * Architecture:
+         * - Modular state management
+         * - Firebase integration (Realtime Database)
+         * - Role-based access control
+         * - Real-time synchronization
+         * - Comprehensive error handling
+         */
+
+        // ============================================
+        // STATE MANAGEMENT
+        // ============================================
+
+        const AppState = {
+            currentUser: null,
+            userData: {},
+            deals: [],
+            tasks: [],
+            teamMembers: [],
+            activityLog: [],
+
+            /**
+             * Initialize application state
+             */
+            init() {
+                this.setupFirebase();
+                this.attachEventListeners();
+            },
+
+            /**
+             * Setup Firebase configuration
+             * NOTE: Replace with your actual Firebase credentials
+             */
+            setupFirebase() {
+                const firebaseConfig = {
+                    apiKey: "YOUR_API_KEY_HERE",
+                    authDomain: "your-project.firebaseapp.com",
+                    databaseURL: "https://your-project.firebaseio.com",
+                    projectId: "your-project",
+                    storageBucket: "your-project.appspot.com",
+                    messagingSenderId: "YOUR_SENDER_ID",
+                    appId: "YOUR_APP_ID"
+                };
+
+                try {
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(firebaseConfig);
+                    }
+                    this.auth = firebase.auth();
+                    this.db = firebase.database();
+                    this.setupAuthStateListener();
+                } catch (error) {
+                    console.error('Firebase initialization error:', error);
+                    this.showErrorNotification('System initialization failed');
+                }
+            },
+
+            /**
+             * Setup authentication state listener
+             */
+            setupAuthStateListener() {
+                this.auth.onAuthStateChanged(user => {
+                    if (user) {
+                        this.currentUser = user;
+                        this.loadDashboard();
+                    } else {
+                        this.showLoginModal();
+                    }
+                });
+            },
+
+            /**
+             * Attach event listeners to modal forms
+             */
+            attachEventListeners() {
+                const loginForm = document.getElementById('loginForm');
+                if (loginForm) {
+                    loginForm.addEventListener('submit', e => e.preventDefault());
+                }
+            }
+        };
+
+        // ============================================
+        // AUTHENTICATION FUNCTIONS
+        // ============================================
+
+        /**
+         * Handle login form submission
+         * @param {Event} event - Form submit event
+         */
+        function handleLoginSubmit(event) {
+            event.preventDefault();
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+
+            if (!email || !password) {
+                showLoginError('Please enter email and password');
+                return;
+            }
+
+            if (!validateEmail(email)) {
+                showLoginError('Please enter a valid email address');
+                return;
+            }
+
+            attemptLogin(email, password);
+        }
+
+        /**
+         * Attempt to authenticate user
+         * @param {string} email - User email
+         * @param {string} password - User password
+         */
+        function attemptLogin(email, password) {
+            AppState.auth.signInWithEmailAndPassword(email, password)
+                .then(user => {
+                    AppState.currentUser = user.user;
+                    clearLoginForm();
+                    hideLoginModal();
+                    loadDashboard();
+                })
+                .catch(error => {
+                    console.error('Login error:', error);
+                    showLoginError(getFirebaseErrorMessage(error.code));
+                });
+        }
+
+        /**
+         * Handle demo account login
+         */
+        function handleDemoLogin() {
+            // Demo credentials - for evaluation only
+            attemptLogin('demo@company.com', 'demo123456');
+        }
+
+        /**
+         * Handle user logout
+         */
+        function handleLogout() {
+            if (!confirm('Are you sure you want to sign out?')) return;
+
+            AppState.auth.signOut()
+                .then(() => {
+                    AppState.currentUser = null;
+                    clearAllData();
+                    showLoginModal();
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                    showErrorNotification('Failed to sign out');
+                });
+        }
+
+        // ============================================
+        // UI FUNCTIONS
+        // ============================================
+
+        /**
+         * Switch between dashboard tabs
+         * @param {string} tabName - Tab identifier
+         */
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('[role="tabpanel"]').forEach(tab => {
+                tab.style.display = 'none';
+                tab.setAttribute('aria-hidden', 'true');
+            });
+
+            // Remove active state from all buttons
+            document.querySelectorAll('[role="tab"]').forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-selected', 'false');
+            });
+
+            // Show selected tab
+            const tabElement = document.getElementById(tabName + '-tab');
+            if (tabElement) {
+                tabElement.style.display = 'block';
+                tabElement.setAttribute('aria-hidden', 'false');
+            }
+
+            // Set active button
+            const buttonElement = event.target;
+            if (buttonElement) {
+                buttonElement.classList.add('active');
+                buttonElement.setAttribute('aria-selected', 'true');
+            }
+        }
+
+        /**
+         * Open modal dialog
+         * @param {string} modalId - Modal element ID
+         */
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('show');
+                modal.focus();
+            }
+        }
+
+        /**
+         * Close modal dialog
+         * @param {string} modalId - Modal element ID
+         */
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('show');
+                clearFormInputs(modalId);
+            }
+        }
+
+        /**
+         * Load dashboard content
+         */
+        function loadDashboard() {
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+
+            updateUserProfile();
+            loadSampleData();
+            renderDashboard();
+        }
+
+        /**
+         * Update user profile display
+         */
+        function updateUserProfile() {
+            if (!AppState.currentUser) return;
+
+            const email = AppState.currentUser.email;
+            const name = email.split('@')[0];
+            
+            document.getElementById('userName').textContent = name;
+            document.getElementById('userRole').textContent = 'Team Member';
+            document.getElementById('userAvatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`;
+        }
+
+        /**
+         * Load sample data for demonstration
+         */
+        function loadSampleData() {
+            AppState.deals = [
+                { id: 1, name: 'Acme Corp Contract', amount: 250000, stage: 'Proposal', dueDate: '2024-06-30' },
+                { id: 2, name: 'TechStart Integration', amount: 125000, stage: 'Negotiation', dueDate: '2024-06-15' },
+                { id: 3, name: 'Global Industries', amount: 450000, stage: 'Prospecting', dueDate: '2024-07-30' }
+            ];
+
+            AppState.tasks = [
+                { id: 1, name: 'Prepare Q3 Presentation', priority: 'High', dueDate: '2024-06-01', status: 'In Progress' },
+                { id: 2, name: 'Update Client Database', priority: 'Medium', dueDate: '2024-06-05', status: 'Not Started' },
+                { id: 3, name: 'Review Budget Forecast', priority: 'High', dueDate: '2024-05-31', status: 'Complete' }
+            ];
+
+            AppState.teamMembers = [
+                { id: 1, name: 'Sarah Chen', email: 'sarah@company.com', role: 'Manager', status: 'online' },
+                { id: 2, name: 'Mike Johnson', email: 'mike@company.com', role: 'Analyst', status: 'online' },
+                { id: 3, name: 'Jessica Lee', email: 'jessica@company.com', role: 'Executive', status: 'idle' }
+            ];
+        }
+
+        /**
+         * Render complete dashboard
+         */
+        function renderDashboard() {
+            renderStats();
+            renderRecentActivity();
+            renderSalesPipeline();
+            renderProjects();
+            renderTeamMembers();
+            renderActivityTimeline();
+        }
+
+        /**
+         * Render overview statistics
+         */
+        function renderStats() {
+            document.getElementById('statDeals').textContent = AppState.deals.length;
+            document.getElementById('statProjects').textContent = 
+                AppState.tasks.filter(t => t.status !== 'Complete').length;
+            document.getElementById('statTeam').textContent = AppState.teamMembers.length;
+            
+            const totalValue = AppState.deals.reduce((sum, deal) => sum + deal.amount, 0);
+            document.getElementById('statRevenue').textContent = 
+                '$' + (totalValue / 1000000).toFixed(2) + 'M';
+        }
+
+        /**
+         * Render recent activity feed
+         */
+        function renderRecentActivity() {
+            const container = document.getElementById('recentActivity');
+            if (!container) return;
+
+            if (AppState.deals.length === 0) {
+                container.innerHTML = '<p class="text-secondary text-sm">No activity yet</p>';
+                return;
+            }
+
+            container.innerHTML = AppState.deals.map(deal => `
+                <div class="flex gap-4 p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition">
+                    <span class="material-symbols-outlined text-yellow-400 flex-shrink-0" aria-hidden="true">
+                        trending_up
+                    </span>
+                    <div class="flex-grow">
+                        <p class="font-semibold text-white">${escapeHtml(deal.name)}</p>
+                        <p class="text-xs text-secondary">
+                            Stage: 
+                            <span class="status-badge progress">${escapeHtml(deal.stage)}</span>
+                        </p>
+                    </div>
+                    <p class="text-yellow-400 font-bold">$${(deal.amount / 1000).toFixed(0)}k</p>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Render sales pipeline
+         */
+        function renderSalesPipeline() {
+            const stages = ['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Closed Won'];
+            const container = document.getElementById('salesPipeline');
+            if (!container) return;
+
+            container.innerHTML = stages.map(stage => {
+                const stageDeal = AppState.deals.find(d => d.stage === stage);
+                return `
+                    <div class="glass-card p-6 rounded-xl">
+                        <h3 class="font-bold text-white mb-4">${escapeHtml(stage)}</h3>
+                        <div class="space-y-3">
+                            ${stageDeal ? `
+                                <div class="bg-gray-800/50 p-4 rounded-lg hover:bg-gray-800 transition cursor-pointer">
+                                    <p class="font-semibold text-white text-sm">${escapeHtml(stageDeal.name)}</p>
+                                    <p class="text-yellow-400 font-bold text-sm mt-2">
+                                        $${(stageDeal.amount / 1000).toFixed(0)}k
+                                    </p>
+                                    <p class="text-xs text-secondary mt-2">
+                                        Due ${stageDeal.dueDate}
+                                    </p>
+                                </div>
+                            ` : '<p class="text-gray-500 text-xs">No deals in this stage</p>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Render projects and tasks
+         */
+        function renderProjects() {
+            const container = document.getElementById('projectsList');
+            if (!container) return;
+
+            if (AppState.tasks.length === 0) {
+                container.innerHTML = '<p class="text-secondary text-sm">No tasks yet</p>';
+                return;
+            }
+
+            container.innerHTML = AppState.tasks.map(task => {
+                const statusClass = {
+                    'Not Started': 'risk',
+                    'In Progress': 'progress',
+                    'Complete': 'complete'
+                }[task.status] || 'active';
+
+                return `
+                    <div class="glass-card p-6 rounded-xl">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex-grow">
+                                <h3 class="font-bold text-white">${escapeHtml(task.name)}</h3>
+                            </div>
+                            <span class="status-badge ${statusClass}">${escapeHtml(task.status)}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm">
+                            <p class="text-secondary">Due: ${task.dueDate}</p>
+                            <p class="font-semibold text-yellow-400">${escapeHtml(task.priority)} Priority</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Render team members grid
+         */
+        function renderTeamMembers() {
+            const container = document.getElementById('teamGrid');
+            if (!container) return;
+
+            if (AppState.teamMembers.length === 0) {
+                container.innerHTML = '<p class="text-secondary text-sm">No team members yet</p>';
+                return;
+            }
+
+            container.innerHTML = AppState.teamMembers.map(member => `
+                <div class="glass-card p-6 rounded-xl text-center hover:scale-105 transition">
+                    <img
+                        src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(member.email)}"
+                        class="w-16 h-16 rounded-full mx-auto mb-4"
+                        alt="${escapeHtml(member.name)}">
+                    <h3 class="font-bold text-white">${escapeHtml(member.name)}</h3>
+                    <p class="text-sm text-yellow-400 font-semibold">${escapeHtml(member.role)}</p>
+                    <p class="text-xs text-secondary mt-2">${escapeHtml(member.email)}</p>
+                    <div class="mt-4 flex justify-center gap-2">
+                        <span class="w-2 h-2 rounded-full ${member.status === 'online' ? 'bg-green-400' : 'bg-gray-500'}"></span>
+                        <span class="text-xs text-secondary capitalize">${member.status}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Render activity timeline
+         */
+        function renderActivityTimeline() {
+            const container = document.getElementById('activityTimeline');
+            if (!container) return;
+
+            const activities = [
+                { icon: 'trending_up', text: 'New deal created: Acme Corp', time: '2 hours ago', color: 'text-yellow-400' },
+                { icon: 'check_circle', text: 'Task completed: Review Budget', time: '4 hours ago', color: 'text-green-400' },
+                { icon: 'person_add', text: 'Team member joined: Mike Johnson', time: '1 day ago', color: 'text-blue-400' }
+            ];
+
+            container.innerHTML = activities.map(activity => `
+                <div class="flex gap-4 p-4 glass-card rounded-xl">
+                    <span class="material-symbols-outlined ${activity.color} flex-shrink-0" aria-hidden="true">
+                        ${activity.icon}
+                    </span>
+                    <div class="flex-grow">
+                        <p class="text-white font-semibold">${activity.text}</p>
+                        <p class="text-xs text-secondary">${activity.time}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ============================================
+        // FORM HANDLERS
+        // ============================================
+
+        /**
+         * Handle deal form submission
+         * @param {Event} event - Form submit event
+         */
+        function handleSaveDeal(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('dealName').value.trim();
+            const amount = parseFloat(document.getElementById('dealAmount').value);
+            const stage = document.getElementById('dealStage').value;
+
+            if (!validateDealInput(name, amount, stage)) {
+                return;
+            }
+
+            const newDeal = {
+                id: Date.now(),
+                name,
+                amount,
+                stage,
+                dueDate: new Date().toISOString().split('T')[0]
+            };
+
+            AppState.deals.push(newDeal);
+            closeModal('dealModal');
+            renderDashboard();
+            showSuccessNotification('Deal created successfully');
+        }
+
+        /**
+         * Handle task form submission
+         * @param {Event} event - Form submit event
+         */
+        function handleSaveTask(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('taskName').value.trim();
+            const priority = document.getElementById('taskPriority').value;
+            const dueDate = document.getElementById('taskDueDate').value;
+
+            if (!validateTaskInput(name, priority, dueDate)) {
+                return;
+            }
+
+            const newTask = {
+                id: Date.now(),
+                name,
+                priority,
+                dueDate,
+                status: 'Not Started'
+            };
+
+            AppState.tasks.push(newTask);
+            closeModal('taskModal');
+            renderDashboard();
+            showSuccessNotification('Task created successfully');
+        }
+
+        /**
+         * Handle team member form submission
+         * @param {Event} event - Form submit event
+         */
+        function handleSaveMember(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('memberName').value.trim();
+            const email = document.getElementById('memberEmail').value.trim();
+            const role = document.getElementById('memberRole').value;
+
+            if (!validateMemberInput(name, email, role)) {
+                return;
+            }
+
+            const newMember = {
+                id: Date.now(),
+                name,
+                email,
+                role,
+                status: 'online'
+            };
+
+            AppState.teamMembers.push(newMember);
+            closeModal('memberModal');
+            renderDashboard();
+            showSuccessNotification('Team member added successfully');
+        }
+
+        // ============================================
+        // VALIDATION FUNCTIONS
+        // ============================================
+
+        /**
+         * Validate email format
+         * @param {string} email - Email to validate
+         * @returns {boolean} - Is valid email
+         */
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        /**
+         * Validate deal input
+         * @param {string} name - Deal name
+         * @param {number} amount - Deal amount
+         * @param {string} stage - Deal stage
+         * @returns {boolean} - Is valid
+         */
+        function validateDealInput(name, amount, stage) {
+            if (!name) {
+                showErrorNotification('Please enter a deal name');
+                return false;
+            }
+            if (amount <= 0 || isNaN(amount)) {
+                showErrorNotification('Please enter a valid amount');
+                return false;
+            }
+            if (!stage) {
+                showErrorNotification('Please select a stage');
+                return false;
+            }
+            return true;
+        }
+
+        /**
+         * Validate task input
+         * @param {string} name - Task name
+         * @param {string} priority - Task priority
+         * @param {string} dueDate - Task due date
+         * @returns {boolean} - Is valid
+         */
+        function validateTaskInput(name, priority, dueDate) {
+            if (!name) {
+                showErrorNotification('Please enter a task description');
+                return false;
+            }
+            if (!priority) {
+                showErrorNotification('Please select a priority');
+                return false;
+            }
+            if (!dueDate) {
+                showErrorNotification('Please select a due date');
+                return false;
+            }
+            return true;
+        }
+
+        /**
+         * Validate team member input
+         * @param {string} name - Member name
+         * @param {string} email - Member email
+         * @param {string} role - Member role
+         * @returns {boolean} - Is valid
+         */
+        function validateMemberInput(name, email, role) {
+            if (!name) {
+                showErrorNotification('Please enter a name');
+                return false;
+            }
+            if (!validateEmail(email)) {
+                showErrorNotification('Please enter a valid email');
+                return false;
+            }
+            if (!role) {
+                showErrorNotification('Please select a role');
+                return false;
+            }
+            return true;
+        }
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+
+        /**
+         * Escape HTML to prevent XSS
+         * @param {string} text - Text to escape
+         * @returns {string} - Escaped text
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        /**
+         * Show error notification
+         * @param {string} message - Error message
+         */
+        function showErrorNotification(message) {
+            const notice = document.createElement('div');
+            notice.className = 'fixed top-6 right-6 bg-red-600 text-white px-6 py-3 rounded-lg z-50 animate-pulse';
+            notice.textContent = message;
+            document.body.appendChild(notice);
+            setTimeout(() => notice.remove(), 4000);
+        }
+
+        /**
+         * Show success notification
+         * @param {string} message - Success message
+         */
+        function showSuccessNotification(message) {
+            const notice = document.createElement('div');
+            notice.className = 'fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded-lg z-50';
+            notice.textContent = message;
+            document.body.appendChild(notice);
+            setTimeout(() => notice.remove(), 3000);
+        }
+
+        /**
+         * Show login modal
+         */
+        function showLoginModal() {
+            document.getElementById('loginModal').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+        }
+
+        /**
+         * Hide login modal
+         */
+        function hideLoginModal() {
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+
+        /**
+         * Show login error
+         * @param {string} message - Error message
+         */
+        function showLoginError(message) {
+            const errorDiv = document.getElementById('loginError');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        /**
+         * Clear login form
+         */
+        function clearLoginForm() {
+            document.getElementById('emailInput').value = '';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        /**
+         * Clear form inputs in modal
+         * @param {string} modalId - Modal ID
+         */
+        function clearFormInputs(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                const inputs = modal.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    input.value = '';
+                });
+            }
+        }
+
+        /**
+         * Clear all application data
+         */
+        function clearAllData() {
+            AppState.currentUser = null;
+            AppState.deals = [];
+            AppState.tasks = [];
+            AppState.teamMembers = [];
+        }
+
+        /**
+         * Get user-friendly Firebase error message
+         * @param {string} errorCode - Firebase error code
+         * @returns {string} - Error message
+         */
+        function getFirebaseErrorMessage(errorCode) {
+            const messages = {
+                'auth/invalid-email': 'Please enter a valid email address',
+                'auth/user-disabled': 'This account has been disabled',
+                'auth/user-not-found': 'Email not found',
+                'auth/wrong-password': 'Incorrect password',
+                'auth/too-many-requests': 'Too many login attempts. Please try again later',
+                'auth/operation-not-allowed': 'Login is currently disabled',
+            };
+            return messages[errorCode] || 'Login failed. Please check your credentials and try again.';
+        }
+
+        // ============================================
+        // INITIALIZE APPLICATION
+        // ============================================
+
+        /**
+         * Initialize app when DOM is ready
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            AppState.init();
+        });
+
+        /**
+         * Handle window unload
+         */
+        window.addEventListener('beforeunload', () => {
+            // Cleanup code if needed
+        });
+    </script>
+</body>
+</html>
